@@ -101,9 +101,9 @@
 
 // Function that converts the ROC plots to the text file
 void roc_to_text(TMVA::Factory *factory,
-                     TMVA::DataLoader *dataloader,
-                     std::map<std::string,int> Use,
-                     string row_or_col)
+                 TMVA::DataLoader *dataloader,
+                 std::map<std::string,int> Use,
+                 string row_or_col)
     {
         // Spacing of each element in the text file. Ensure that the name of 
         // the method is at least 4 characters shorter than 'dent'
@@ -292,7 +292,7 @@ void exit_root()
     {
        string usr_exit;
        cout << "Please type 'exit' to exit the ROOT interactive shell." << endl 
-            << "To continue in ROOT, please type continue." << endl;
+            << "To continue in ROOT, please type 'continue'." << endl;
        while(true)
            {
                getline(cin, usr_exit);
@@ -320,9 +320,10 @@ void ML_Methods(TString myMethodList = "")
        std::map<std::string,int> Use;
 
        // Neural Networks (all are feed-forward Multilayer Perceptrons)
-       Use["MLP_Default"]     = 1; // Recommended ANN
-       Use["MLP_Tanh"]        = 1;
-       Use["MLP_Sigm"]        = 1;
+       Use["MLP_Def_Sigm"]    = 1; // Recommended ANN
+       Use["MLP_Def_Tanh"]    = 1;
+       Use["MLP_Tanh_17"]     = 1;
+       Use["MLP_Sigm_17"]     = 1;
        Use["DNN_Tanh"]        = 0;
        Use["DNN_Sigm"]        = 0;
        Use["DNN_Sigm_Fast"]   = 0;
@@ -330,10 +331,10 @@ void ML_Methods(TString myMethodList = "")
        // Boosted Decision Trees
        Use["BDT_350_K"]       = 1; // Uses Adaptive Boost
        Use["BDT_120_H"]       = 1;
-       Use["BDTG"]            = 1; // Uses Gradient Boost
-       Use["BDTB"]            = 1; // Uses Bagging
-       Use["BDTD"]            = 1; // Decorrelation + Adaptive Boost
-       Use["BDTF"]            = 1; // Allow usage of fisher discriminant for node splitting
+       Use["BDTG_H"]          = 1; // Uses Gradient Boost
+       Use["BDTB_H"]          = 1; // Uses Bagging
+       Use["BDTD_H"]          = 1; // Decorrelation + Adaptive Boost
+       Use["BDTF_H"]          = 1; // Allow usage of fisher discriminant for node splitting
        // ---------------------------------------------------------------
 
        cout << endl;
@@ -406,9 +407,9 @@ void ML_Methods(TString myMethodList = "")
 
        // Declaring factory for training and testing
        TMVA::Factory *factory = new TMVA::Factory("TMVAClassification", outputFile,
-                                                  "!V:!Silent:Color:DrawProgressBar"
-                                                  ":Transformations=I;D;P;G,D"
-                                                  ":AnalysisType=Classification");
+                                                  "!V:!Silent:Color:DrawProgressBar:"
+                                                  "Transformations=I;D;P;G,D:"
+                                                  "AnalysisType=Classification");
 
        // Declaring the data loader for loading the variables
        // and the signal and background trees
@@ -460,20 +461,23 @@ void ML_Methods(TString myMethodList = "")
        // TMVA ANN: MLP (recommended ANN)
        
        // MLP using default TMVA arguments
-       if (Use["MLP_Default"])
-           factory->BookMethod(dataloader, TMVA::Types::kMLP, "MLP_Default","!V");
+       if (Use["MLP_Def_Sigm"])
+           factory->BookMethod(dataloader, TMVA::Types::kMLP, "MLP_Def_Sigm","NeuronType=sigmoid:!V");
+           
+       if (Use["MLP_Def_Tanh"])
+           factory->BookMethod(dataloader, TMVA::Types::kMLP, "MLP_Def_Tanh","NeuronType=tanh:!V");
        
-       // MLP using 2 hidden layers, one with 12 nodes and the second with 11 nodes.
+       // MLP using 2 hidden layers, one with 17 nodes and the second with 16 nodes.
        // The activation function of each node is a hyperbolic tangent function
-       if (Use["MLP_Tanh"])
-           factory->BookMethod(dataloader, TMVA::Types::kMLP, "MLP_Tanh",
-                               "NeuronType=tanh:HiddenLayers=12,11:!V");
+       if (Use["MLP_Tanh_17"])
+           factory->BookMethod(dataloader, TMVA::Types::kMLP, "MLP_Tanh_17",
+                               "NeuronType=tanh:HiddenLayers=17,16:!V");
 
-       // MLP using 2 hidden layers, one with 12 nodes and the second with 11 nodes.
+       // MLP using 2 hidden layers, one with 17 nodes and the second with 16 nodes.
        // The activation function of each node is a sigmoid function
-       if (Use["MLP_Sigm"])      
-           factory->BookMethod(dataloader, TMVA::Types::kMLP, "MLP_Sigm",
-                               "NeuronType=sigmoid:HiddenLayers=12,11:!V");
+       if (Use["MLP_Sigm_17"])      
+           factory->BookMethod(dataloader, TMVA::Types::kMLP, "MLP_Sigm_17",
+                               "NeuronType=sigmoid:HiddenLayers=17,16:!V");
 
        // DNNs that use the CPU architecture. None of these methods have been optimized
        // for the "gamma" dataset or its variables
@@ -506,7 +510,7 @@ void ML_Methods(TString myMethodList = "")
                                     "WeightInitialization=XAVIERUNIFORM");
                dnnOptions1.Append (":"); dnnOptions1.Append (layoutString1);
                dnnOptions1.Append (":"); dnnOptions1.Append (trainingStrategyString1);
-               TString cpuOptions1 = dnnOptions1 + ":Architecture=GPU";
+               TString cpuOptions1 = dnnOptions1 + ":Architecture=CPU";
                factory->BookMethod(dataloader, TMVA::Types::kDNN, "DNN_Tanh", cpuOptions1);
           }
         
@@ -558,7 +562,7 @@ void ML_Methods(TString myMethodList = "")
                dnnOptions2.Append (":"); dnnOptions2.Append (layoutString2);
                dnnOptions2.Append (":"); dnnOptions2.Append (trainingStrategyString2);
 
-               TString cpuOptions2 = dnnOptions2 + ":Architecture=GPU";
+               TString cpuOptions2 = dnnOptions2 + ":Architecture=CPU";
                factory->BookMethod(dataloader, TMVA::Types::kDNN, "DNN_Sigm", cpuOptions2);
           }
 
@@ -595,8 +599,8 @@ void ML_Methods(TString myMethodList = "")
       // Boosted Decision Trees
       
       // Gradient Boost. Utlizes 390 trees
-      if (Use["BDTG"])
-          factory->BookMethod(dataloader, TMVA::Types::kBDT, "BDTG",
+      if (Use["BDTG_H"])
+          factory->BookMethod(dataloader, TMVA::Types::kBDT, "BDTG_H",
                               "!H:!V:NTrees=390:MinNodeSize=22%:"
                               "BoostType=AdaBoost:Shrinkage=1:"
                               "UseBaggedBoost:BaggedSampleFraction=0.5:"
@@ -619,14 +623,14 @@ void ML_Methods(TString myMethodList = "")
                                "SeparationType=GiniIndex:nCuts=20");
 
        // Bagging. Utilizes 200 trees
-       if (Use["BDTB"]) 
-           factory->BookMethod(dataloader, TMVA::Types::kBDT, "BDTB",
+       if (Use["BDTB_H"]) 
+           factory->BookMethod(dataloader, TMVA::Types::kBDT, "BDTB_H",
                                "!H:!V:NTrees=200:BoostType=Bagging:"
                                "SeparationType=CrossEntropy:nCuts=30");
 
        // Decorrelation + Adaptive Boost. Utilizes 380 trees
-       if (Use["BDTD"])
-           factory->BookMethod(dataloader, TMVA::Types::kBDT, "BDTD",
+       if (Use["BDTD_H"])
+           factory->BookMethod(dataloader, TMVA::Types::kBDT, "BDTD_H",
                                "!H:!V:NTrees=380:MinNodeSize=27%:"
                                "MaxDepth=10:BoostType=AdaBoost:"
                                "SeparationType=GiniIndex:nCuts=40:"
@@ -634,8 +638,8 @@ void ML_Methods(TString myMethodList = "")
                                
        // Allow Using Fisher discriminant in node splitting for (strong) 
        // linearly correlated variables. Utilizes 50 trees
-       if (Use["BDTF"])
-          factory->BookMethod(dataloader, TMVA::Types::kBDT,"BDTF",
+       if (Use["BDTF_H"])
+          factory->BookMethod(dataloader, TMVA::Types::kBDT,"BDTF_H",
                               "!H:!V:NTrees=50:MinNodeSize=2.5%:UseFisherCuts"
                               ":MaxDepth=3:BoostType=AdaBoost:AdaBoostBeta=0.5"
                               ":SeparationType=GiniIndex:nCuts=20");
